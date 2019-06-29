@@ -1,0 +1,35 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HTAPI", "..\HTAPI\HTAPI.cs\HTAPI.csproj", "{2402684F-4CF7-4287-8396-40FC653834FF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BonnieApp", "BonnieApp\BonnieApp.csproj", "{1D4AC1C9-EBB3-4994-92D9-B74925FDBE31}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2402684F-4CF7-4287-8396-40FC653834FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2402684F-4CF7-4287-8396-40FC653834FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2402684F-4CF7-4287-8396-40FC653834FF}.Debug|x86.ActiveCfg = Debug|x86
+		{2402684F-4CF7-4287-8396-40FC653834FF}.Debug|x86.Build.0 = Debug|x86
+		{2402684F-4CF7-4287-8396-40FC653834FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2402684F-4CF7-4287-8396-40FC653834FF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2402684F-4CF7-4287-8396-40FC653834FF}.Release|x86.ActiveCfg = Release|x86
+		{2402684F-4CF7-4287-8396-40FC653834FF}.Release|x86.Build.0 = Release|x86
+		{1D4AC1C9-EBB3-4994-92D9-B74925FDBE31}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{1D4AC1C9-EBB3-4994-92D9-B74925FDBE31}.Debug|Any CPU.Build.0 = Debug|x86
+		{1D4AC1C9-EBB3-4994-92D9-B74925FDBE31}.Debug|x86.ActiveCfg = Debug|x86
+		{1D4AC1C9-EBB3-4994-92D9-B74925FDBE31}.Debug|x86.Build.0 = Debug|x86
+		{1D4AC1C9-EBB3-4994-92D9-B74925FDBE31}.Release|Any CPU.ActiveCfg = Release|x86
+		{1D4AC1C9-EBB3-4994-92D9-B74925FDBE31}.Release|x86.ActiveCfg = Release|x86
+		{1D4AC1C9-EBB3-4994-92D9-B74925FDBE31}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

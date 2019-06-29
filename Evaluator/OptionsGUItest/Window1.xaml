@@ -1,0 +1,18 @@
+﻿<Window x:Class="OptionsGUItest.Window1"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Pacific Options" Height="333" Width="447">
+    <Grid>
+        <Grid Margin="18,20,8,37" Name="grid">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Name="cDelta" />
+                <ColumnDefinition Name="cBid" />
+                <ColumnDefinition Name="cAsk" />
+                <ColumnDefinition Name="strike" />
+                <ColumnDefinition Name="pBid" />
+                <ColumnDefinition Name="pAsk" />
+                <ColumnDefinition Name="pDelta" />
+            </Grid.ColumnDefinitions>
+        </Grid>
+    </Grid>
+</Window>
