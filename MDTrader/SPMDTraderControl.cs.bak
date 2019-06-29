@@ -1,0 +1,737 @@
+using System;
+using System.Diagnostics;
+using System.Collections.Generic;
+using System.Windows.Forms;
+
+using TT.SP.Trading;
+using TT.SP.Trading.Tick;
+using TT.SP.Trading.Execution;
+using TT.SP.Trading.MarketData.Live;
+using TT.SP.Trading.Controls.Ribbon;
+using TT.SP.Trading.Controls.MDTrader.Depth;
+using TT.SP.Trading.MarketData;
+
+namespace TT.SP.Trading.Controls.MDTrader
+{
+    public partial class SPMDTraderControl : UserControl
+    {
+        public event MDTraderControl.SendOrderEventHandler OnSendOrderRequest;
+
+        #region PRIVATE MEMBERS
+        private ITickCalculator _tickCalc;
+        private IDepthPublisher _depthPublisher;
+        private IInsideMarketPublisher _imuPublisher;
+        private IExchangeStatePublisher _exchangeStatePublisher;
+        private Dictionary<string/*siteorderkey*/, IOrderDriver> _workingOrders;
+        
+        private OrderServiceRibbonElementCollection _orderTypeRibbon;
+        private OrderQuantityRibbonElementCollection _orderQuantityRibbon;
+        private RibbonElementCollection _orderManagementRibbon;
+
+        private int? _startingTag;
+        private int _middleTag;
+        private int _numberOfRows = 36;
+        private bool _recenter = true;
+        private List<int> _tags;
+        #endregion
+
+        #region CTORS
+        public SPMDTraderControl()
+        {
+            InitializeComponent();
+
+            _workingOrders = new Dictionary<string, IOrderDriver>();
+            _tags = new List<int>();
+            
+            _orderTypeRibbon    = new OrderServiceRibbonElementCollection();
+            ribbonWheelMain.AddRibbon(_orderTypeRibbon);
+
+            _orderQuantityRibbon = new OrderQuantityRibbonElementCollection();
+            _orderQuantityRibbon.AddQuantities(1, 2, 3, 5, 10, 15, 20, 25, 50, 100, 500);
+            ribbonWheelMain.AddRibbon(_orderQuantityRibbon);
+
+            _orderManagementRibbon = new RibbonElementCollection("Orders");
+            _orderManagementRibbon.Add(new ButtonRibbonElement("Delete All", DeleteAllOrdersAction));
+            _orderManagementRibbon.Add(new ButtonRibbonElement("Delete Bids", DeleteAllBidsAction));
+            _orderManagementRibbon.Add(new ButtonRibbonElement("Delete Offers", DeleteAllOffersAction));
+ 
+            ribbonWheelMain.AddRibbon(_orderManagementRibbon);
+
+            SetupGrid();
+            SetEnabled(true);   //start with an enabled control, can be changed in Setup if we have an exchange state publisher
+        }
+        #endregion
+
+        #region PRIVATE THINGS
+        private void ribbonWheelVisibleToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
+        {
+            splitContainerMain.Panel1Collapsed = !ribbonWheelVisibleToolStripMenuItem.Checked;
+        }
+
+        const int WM_KEYDOWN = 0x100;
+        const int WM_SYSKEYDOWN = 0x104;
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (msg.Msg == WM_KEYDOWN || msg.Msg == WM_SYSKEYDOWN)
+            {
+                switch (keyData)
+                {
+                    case Keys.Control | Keys.D1:
+                        ribbonWheelMain.SetWheelIndex(0);
+                        break;
+                    case Keys.Control | Keys.D2:
+                        ribbonWheelMain.SetWheelIndex(1);
+                        break;
+                    case Keys.Control | Keys.D3:
+                        ribbonWheelMain.SetWheelIndex(2);
+                        break;
+                    case Keys.Control | Keys.D4:
+                        ribbonWheelMain.SetWheelIndex(3);
+                        break;
+                    case Keys.Control | Keys.D5:
+                        ribbonWheelMain.SetWheelIndex(4);
+                        break;
+                    case Keys.Control | Keys.D6:
+                        ribbonWheelMain.SetWheelIndex(5);
+                        break;
+                    case Keys.Control | Keys.D7:
+                        ribbonWheelMain.SetWheelIndex(6);
+                        break;
+                    case Keys.Control | Keys.D8:
+                        ribbonWheelMain.SetWheelIndex(7);
+                        break;
+                    case Keys.Control | Keys.D9:
+                        ribbonWheelMain.SetWheelIndex(8);
+                        break;
+                    case Keys.Control | Keys.D0:
+                        ribbonWheelMain.SetWheelIndex(9);
+                        break;
+                    case Keys.Space:
+                        Recenter();
+                        break;
+                }
+            }
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+
+        private void SPMDTraderControl_Resize(object sender, EventArgs e)
+        {
+            //DetermineGridParameters();
+            SetupGrid();
+        }
+        private void SPMDTraderControl_Load(object sender, EventArgs e)
+        {
+            panelTopDockedRibbon.Visible =
+                panelRightDockRibbon.Visible =
+                    panelBottomDockedRibbon.Visible =
+                        panelLeftDockedRibbon.Visible = false;
+
+            ribbonWheelMain.LoadCurrent();
+        }
+        private void DepthPublisher_DepthUpdateRecenter(IDepthPublisher sender, IDepthUpdate update)
+        {
+            DepthPublisher_DepthUpdate(sender, update);
+            //now unhook this handler and hook up the "real" one, that doesn't call Recenter()
+            _depthPublisher.DepthUpdated -= DepthPublisher_DepthUpdateRecenter;
+            _depthPublisher.DepthUpdated += DepthPublisher_DepthUpdate;
+            Recenter();
+        }
+        private void DepthPublisher_DepthUpdate(IDepthPublisher sender, IDepthUpdate update)
+        {
+            Snapshot newSnapshot = new Snapshot();
+
+            for (int bidItem = 0; bidItem < update.BidList.Count; bidItem++)
+            {
+                IDepthItem di = update.BidList[bidItem];
+                if (di.Qty > 0)
+                    newSnapshot.BidList.Add(new Item(di.Price, di.Qty));
+            }
+
+            for (int askItem = 0; askItem < update.AskList.Count; askItem++)
+            {
+                IDepthItem di = update.AskList[askItem];
+                if (di.Qty > 0)
+                    newSnapshot.AskList.Add(new Item(di.Price, di.Qty));
+            }
+            mdTraderControlMain.AcceptDepth(newSnapshot);
+        }
+
+        private void IMPublisher_InsideMarketUpdatedRecenter(IInsideMarketPublisher sender, IInsideMarketUpdate update)
+        {
+            IMPublisher_InsideMarketUpdated(sender, update);
+            //now unhook this handler and hook up the "real" one, that doesn't call Recenter()
+            _imuPublisher.InsideMarketUpdated -= IMPublisher_InsideMarketUpdatedRecenter;
+            _imuPublisher.InsideMarketUpdated += IMPublisher_InsideMarketUpdated;
+            Recenter();
+        }
+        private void IMPublisher_InsideMarketUpdated(IInsideMarketPublisher sender, IInsideMarketUpdate update)
+        {
+            Snapshot newSnapshot = new Snapshot();
+
+            bool validUpdate = false;
+            if (update.BidQty > 0)
+            {
+                newSnapshot.BidList.Add(new Item(update.Bid, update.BidQty));
+                validUpdate = true;
+            }
+            if (update.AskQty > 0)
+            {
+                newSnapshot.AskList.Add(new Item(update.Ask, update.AskQty));
+                validUpdate = true;
+            }
+
+            if (validUpdate)
+            {
+                mdTraderControlMain.AcceptDepth(newSnapshot);
+
+                if (_recenter)
+                {
+                    Recenter();
+                    _recenter = false;
+                }
+            }
+        }
+        private void IMPublisher_PrintOccured(IInsideMarketPublisher sender, IInsideMarketUpdate update)
+        {
+            if (update.LastDirty)
+                mdTraderControlMain.SetLTP(update.Last);
+            mdTraderControlMain.SetLTQ(update.LastQty, update.LastQty);
+        }
+        private void RefreshWorkingAtPriceLevel(int priceLevel)
+        {
+            int totalAtLevel = 0;
+            bool isbuy = false;
+
+            List<IOrderDriver> staleODs = new List<IOrderDriver>();
+
+            foreach (IOrderDriver order in _workingOrders.Values)
+            {
+                // display stop orders at their stop price
+                if (order.IsStop && order.StopPrice != int.MinValue)
+                {
+                    if (order.StopPrice == priceLevel)
+                    {
+                        totalAtLevel += order.WorkingQty;
+                        isbuy = order.Side == Side.Buy;
+                    }
+                }
+                else if (order.LimitPrice == priceLevel)
+                {
+                    totalAtLevel += order.WorkingQty;
+                    isbuy = order.Side == Side.Buy;
+                }
+                if (!order.InFlight && (order.Completed || order.Filled || order.WorkingQty < 1))
+                    staleODs.Add(order);
+            }
+
+            if (totalAtLevel > 0)
+            {
+                mdTraderControlMain.SetWorkingExecAtPriceLevel(
+                    priceLevel,
+                    isbuy,
+                    totalAtLevel.ToString());
+            }
+            else
+            {
+                mdTraderControlMain.RemoveWorkingExecAtPriceLevel(priceLevel);
+            }
+
+            foreach (IOrderDriver od in staleODs)
+                _workingOrders.Remove(od.Key) ;
+        }
+
+        private void Timer_Tick( object sender, EventArgs e )
+        {
+            // very hackish, but want to make sure the order column stays clean
+            // of 'phantom' orders
+            for ( int i = 0; i < _tags.Count; i++ )
+                RefreshWorkingAtPriceLevel( _tags[i] );
+        }
+
+        private void SetupGrid()
+        {
+            List<string> labels = new List<string>();
+            _tags.Clear();
+
+            DetermineGridParameters();
+
+            if (_tickCalc != null)
+            {
+                int tick = _startingTag.Value;
+                for (int i = 0; i < _numberOfRows; ++i)
+                {
+                    labels.Add(_tickCalc.FromTickToString(tick));
+                    _tags.Add(tick);
+                    tick = _tickCalc.Decrement(tick);
+                }
+            }
+            else 
+            {
+                for (int i = _startingTag.Value; i > _startingTag - _numberOfRows; --i)
+                {
+                    labels.Add(i.ToString());
+                    _tags.Add(i);
+                }
+            }
+
+            mdTraderControlMain.SetGridRows(labels.ToArray(), _tags.ToArray());
+        }
+
+        private void ClearPublishers()
+        {
+            if (_imuPublisher != null)
+            {
+                _imuPublisher.Stop();
+                _imuPublisher.InsideMarketUpdated -= IMPublisher_InsideMarketUpdated;
+                _imuPublisher.OnAgileStatusChanged -= _imuPublisher_OnAgileStatusChanged;
+                _imuPublisher = null;
+            }
+            if (_depthPublisher != null)
+            {
+                _depthPublisher.Stop();
+                _depthPublisher.DepthUpdated += DepthPublisher_DepthUpdate;
+                _depthPublisher = null;
+            }
+            if (_exchangeStatePublisher != null)
+            {
+                _exchangeStatePublisher.OnExchangeStateChange -= _exchangeStatePublisher_OnExchangeStateChange;
+                _exchangeStatePublisher = null;
+            }
+        }
+        private void DetermineGridParameters()
+        {
+            // the height of the grid minus any headers or footers
+            int gridHeight = mdTraderControlMain.GetGridHeightMinusHeader();
+
+            // the height i want for the rows is 15, this should be dynamic or configureable somehow
+            // use that and the height of the grid to determine the number of rows
+            _numberOfRows = gridHeight / mdTraderControlMain.GetRecommendedRowHeight();
+
+            if (_tickCalc != null)
+            {
+                _startingTag = _tickCalc.Increment(_middleTag, (_numberOfRows / 2));
+            }
+            else
+                _startingTag = _middleTag + _numberOfRows / 2;
+        }
+        private void DetermineMiddleTag()
+        {
+            _middleTag = 0;
+
+            if (_depthPublisher != null)
+            {
+                IDepthUpdate cachedDepth = _depthPublisher.GetLatestDepthUpdate();
+                if (cachedDepth != null)
+                {
+                    _middleTag =
+                        cachedDepth.BestBidPrice + ((cachedDepth.BestAskPrice - cachedDepth.BestBidPrice) / 2);
+                }
+            }
+            if (_middleTag == 0)
+            {
+                if (_imuPublisher != null)
+                {
+                    IInsideMarketUpdate cachedIMU = _imuPublisher.GetLatestInsideMarketUpdate();
+
+                    if (cachedIMU != null)
+                    {
+                        // i'm using int.MinValue as the invalid price in the market publishers
+                        if (cachedIMU.Bid != int.MinValue && cachedIMU.Ask != int.MinValue)
+                            _middleTag = cachedIMU.Bid + ((cachedIMU.Ask - cachedIMU.Bid) / 2);
+                        else if (cachedIMU.Bid != int.MinValue)
+                            _middleTag = cachedIMU.Bid;
+                        else if (cachedIMU.Ask != int.MaxValue)
+                            _middleTag = cachedIMU.Ask;
+                        else if (cachedIMU.Last != int.MinValue)
+                            _middleTag = cachedIMU.Last;
+                    }
+                }
+            }
+
+            if (_tickCalc != null)
+                _middleTag = _tickCalc.RoundUp(_middleTag);
+        }
+        private void RefreshLevel(IOrderDriver order)
+        {
+            int levelToRefresh;
+            if (order.IsStop && order.StopPrice != int.MinValue)
+                levelToRefresh = order.StopPrice;
+            else
+                levelToRefresh = order.LimitPrice;
+
+            RefreshWorkingAtPriceLevel(levelToRefresh);
+
+            if (order.PreviousChangeLimitPrice != int.MinValue)
+                RefreshWorkingAtPriceLevel(order.PreviousChangeLimitPrice);
+        }
+        private void Recenter()
+        {
+            DetermineMiddleTag();
+            SetupGrid();
+        }
+
+        private void OrderRejected(IOrderDriver order)
+        {
+            order.OnFullyFilled -= OrderFilled;
+            order.OnCanceled -= OrderCanceled;
+            order.OnStatusUpdate -= OrderStatusUpdated;
+            order.OnRejected -= OrderRejected;
+
+            if (order.Completed && _workingOrders.ContainsKey(order.Key))
+                _workingOrders.Remove(order.Key);
+
+            RefreshLevel(order);
+        }
+
+        // This event is only supposed to fire when the order is fully filled
+        private void OrderFilled(IOrderDriver order)
+        {
+            order.OnFullyFilled -= OrderFilled;
+            order.OnCanceled -= OrderCanceled;
+            order.OnStatusUpdate -= OrderStatusUpdated;
+            order.OnRejected -= OrderRejected;
+
+            if (order.Completed && _workingOrders.ContainsKey(order.Key))
+                _workingOrders.Remove(order.Key);
+
+            RefreshLevel(order);
+        }
+        private void OrderCanceled(IOrderDriver order)
+        {
+            order.OnFullyFilled -= OrderFilled;
+            order.OnCanceled -= OrderCanceled;
+            order.OnStatusUpdate -= OrderStatusUpdated;
+            order.OnRejected -= OrderRejected;
+
+            if (order.Completed && _workingOrders.ContainsKey(order.Key))
+                _workingOrders.Remove(order.Key);
+
+            RefreshLevel(order);
+        }
+        private void OrderStatusUpdated(IOrderDriver order)
+        {
+            if (order.Status == OrderStatus.New)
+            {
+                TrackOrder(order);
+                return;
+            }
+
+            if (!order.InFlight)
+                RefreshLevel(order);
+        }
+
+        #region MD TRADER EVENT HANDLERS
+        private void MDTrader_SendOrderRequest(int level, bool bIsBuy)
+        {
+            IOrderService ordSvc = _orderTypeRibbon.GetSelectedOrderService();
+
+            if (ordSvc == null)
+            {
+                if (OnSendOrderRequest == null)
+                {
+                    TradingApplicationServices.SendStatusMessage("Cannot handle order requests, MD Trader was not configured with a valid order service");
+                    return;
+                }
+
+                OnSendOrderRequest(level, bIsBuy);
+                return;
+            }
+
+            int qty = _orderQuantityRibbon.GetSelectedQuantity();
+            
+            IOrderDriver newOrder = null;
+            if (bIsBuy)
+                newOrder = ordSvc.Buy(
+                        OrderStatusUpdated,
+                        OrderFilled,
+                        OrderCanceled,
+                        OrderRejected,
+                        level,
+                        level,
+                        qty);
+            else
+                newOrder = ordSvc.Sell(
+                        OrderStatusUpdated,
+                        OrderFilled,
+                        OrderCanceled,
+                        OrderRejected,
+                        level,
+                        level,
+                        qty);
+
+            if (newOrder != null)
+                TrackOrder(newOrder);
+            else
+                TradingApplicationServices.SendStatusMessage("Could not send order, ILimitOrderService returned a null IOrderDriver");
+        }
+        private void MDTrader_DeleteAllOrdersAtLevel(int level)
+        {
+            // need a temporary list, because the order may be removed from _workingOrders
+            List<IOrderDriver> tempList = new List<IOrderDriver>(_workingOrders.Values);
+            foreach(IOrderDriver order in tempList)
+            {
+                if (order.IsStop && order.StopPrice == level)
+                    order.Delete();
+                else if (order.LimitPrice == level)
+                    order.Delete();
+            }
+        }
+        private void MDTrader_ChangeOrdersAtLevel(int origLevel, int newLevel)
+        {
+            foreach (IOrderDriver ord in new List<IOrderDriver>(_workingOrders.Values))
+            {
+                if (ord.StopPrice != int.MinValue && ord.StopPrice == origLevel)
+                    ord.ChangeStopTicks(newLevel);
+                else if (ord.LimitPrice == origLevel)
+                    ord.ChangeLimitTicks(newLevel);
+            }
+        }
+        private void MDTrader_OrderHover(bool active, int level)
+        {
+        }
+
+        private void RecenterAction()
+        {
+            Recenter();
+        }
+        private void DeleteAllBidsAction(object sender, EventArgs e)
+        {
+            foreach (IOrderDriver od in _workingOrders.Values)
+                if (od.Side == Side.Buy) 
+                    od.Delete();
+        }
+        private void DeleteAllOffersAction(object sender, EventArgs e)
+        {
+            foreach (IOrderDriver od in _workingOrders.Values)
+                if (od.Side == Side.Sell)
+                    od.Delete();
+        }
+        private void DeleteAllOrdersAction(object sender, EventArgs e)
+        {
+            foreach (IOrderDriver od in _workingOrders.Values)
+                od.Delete();
+        }
+
+        private void MDTrader_ShiftScroll(int amount)
+        {
+            if (_tickCalc != null)
+                _middleTag = _tickCalc.Increment(_middleTag, amount);
+            else
+                _middleTag += amount;
+
+            SetupGrid();
+        }
+        private void MDTrader_PriceColumnClicked(object sender, MouseEventArgs e)
+        {
+        }
+        private void MDTrader_TradeOut(object sender, EventArgs e)
+        {
+            IOrderService ordSvc = _orderTypeRibbon.GetSelectedOrderService();
+            if (ordSvc == null)
+            {
+                TradingApplicationServices.SendStatusMessage("Cannot handle order requests, MD Trader was not configured with a valid order service");
+                return;
+            }
+            Debug.Assert(false, "not implemented");
+        }
+        //private void MDTrader_ToggleMarker(int tag)
+        //{
+        //}
+        private void MDTrader_EnabledChanged(object sender, EventArgs e)
+        {
+            //mdTraderControlMain.Enabled = this.Enabled;
+            Enabled = mdTraderControlMain.Enabled;
+        }
+        #endregion
+
+        #endregion
+
+        #region PUBLIC THINGS
+        public void ReloadRibbon()
+        {
+            ribbonWheelMain.LoadCurrent();
+        }
+        
+        // TODO: Implement unregister order service
+
+        public void RegisterOrderServiceRange(IOrderServiceListProvider orderSvcProvider)
+        {
+            RegisterOrderServiceRange(orderSvcProvider.QueryAvailableOrderServices());
+        }
+        public void RegisterOrderServiceRange(IOrderService[] svcs)
+        {
+            if (svcs == null || svcs.Length < 1) return;
+
+            foreach (IOrderService svc in svcs)
+                RegisterOrderService(svc);
+        }
+        public void RegisterOrderService(IOrderService svc)
+        {
+            if (svc == null) return;
+
+            _orderTypeRibbon.AddOrderService(svc);
+        }
+        public void TrackOrder(IOrderDriver order)
+        {
+            if (order.Key == null) return;
+
+            // in case we've gotten this order twice, be sure not to track it twice
+            if (!_workingOrders.ContainsKey(order.Key))
+            {
+                _workingOrders.Add(order.Key, order);
+
+                order.OnFullyFilled += OrderFilled;
+                order.OnCanceled += OrderCanceled;
+                order.OnRejected += OrderRejected;
+                order.OnStatusUpdate += OrderStatusUpdated;
+            }
+
+            RefreshLevel(order);
+        }
+        public void Clear()
+        {
+            _tickCalc = null;
+
+            if (_imuPublisher != null) 
+            {
+                _imuPublisher.PrintOccured -= IMPublisher_PrintOccured;
+                _imuPublisher.InsideMarketUpdated -= IMPublisher_InsideMarketUpdated;
+                _imuPublisher = null;
+            }
+            if (_exchangeStatePublisher != null)
+            {
+                _exchangeStatePublisher.OnExchangeStateChange -= _exchangeStatePublisher_OnExchangeStateChange;
+                _exchangeStatePublisher = null;
+            }
+            if (_depthPublisher != null)
+            {
+                _depthPublisher.DepthUpdated -= DepthPublisher_DepthUpdate;
+                _depthPublisher = null;
+            }
+
+            _orderTypeRibbon.Clear();
+
+            SetupGrid();
+
+            mdTraderControlMain.AcceptDepth(new Snapshot());
+            mdTraderControlMain.ClearAveragePrice();
+            mdTraderControlMain.SetLTP(int.MinValue);
+            mdTraderControlMain.SetLTQ(0, 0);
+
+            //TODO - tpeterson - here we have the depth (or prices) but we need to refresh the display
+        }
+        public void Setup(
+            ITickCalculator tickCalc,
+            IInsideMarketPublisher imuPublisher, 
+            IDepthPublisher depthPublisher,
+            IExchangeStatePublisher exchangeStatePublisher)
+        {
+            #region ARG CHECK
+            Debug.Assert(tickCalc != null, "tickCalc cannot be null");
+            if (tickCalc == null)
+                throw new ArgumentNullException("tickCalc");
+            #endregion
+
+            ClearPublishers();
+            _tickCalc = tickCalc;
+
+            if (imuPublisher != null)
+            {
+                _imuPublisher = imuPublisher;
+                _imuPublisher.PrintOccured          += IMPublisher_PrintOccured;
+                
+                // if the depth publisher is null, then we are just going to display inside market info, 
+                // so wire up that event and buld the depth from the inside market
+                if (depthPublisher == null)
+                {
+                    _imuPublisher.InsideMarketUpdated += IMPublisher_InsideMarketUpdatedRecenter;
+                    _imuPublisher.OnAgileStatusChanged += _imuPublisher_OnAgileStatusChanged;
+                    _imuPublisher.Start();
+                    mdTraderControlMain.Enabled = _imuPublisher.Started;
+                    SetEnabled(_imuPublisher.Started);
+                }
+            }
+
+            if (depthPublisher != null)
+            {
+                _depthPublisher = depthPublisher;
+                _depthPublisher.DepthUpdated += DepthPublisher_DepthUpdateRecenter;
+                _depthPublisher.Start();
+                mdTraderControlMain.Enabled = _depthPublisher.Started;
+                SetEnabled(_depthPublisher.Started);
+            }
+
+            if (exchangeStatePublisher != null)
+            {
+                _exchangeStatePublisher = exchangeStatePublisher;
+                _exchangeStatePublisher.OnExchangeStateChange += _exchangeStatePublisher_OnExchangeStateChange;
+                SetEnabled(exchangeStatePublisher.AllServersUp);
+            }
+        }
+
+        void SetEnabled(bool val)
+        {
+            if (val)
+            {
+                this.mdTraderControlMain.SetColorsEnabled();
+            }
+            else
+            {
+                mdTraderControlMain.SetColorsDisabled();
+            }
+            this.Invalidate();
+        }
+
+        void _imuPublisher_OnAgileStatusChanged(object sender, EventArgs e)
+        {
+            if (_imuPublisher != null)
+            {
+                mdTraderControlMain.Enabled = _imuPublisher.Started;
+                SetEnabled(_imuPublisher.Started);
+            }
+            if( _imuPublisher.Started ) Recenter();
+        }
+
+        void _exchangeStatePublisher_OnExchangeStateChange(IExchangeStatePublisher sender, ServerState exchangeState)
+        {
+            SetEnabled(sender.AllServersUp);
+        }
+
+        public MDTraderControl MDControl
+        {
+            [DebuggerStepThrough]
+            get { return mdTraderControlMain; }
+        }
+        #endregion
+
+
+    }
+    class TradeableOrderTypePackage
+    {
+        private string _displayString;
+        private IOrderService _ordSvc;
+        private string _description;
+        private Shortcut _shortCut;
+
+        public Shortcut ShortCut
+        {
+            get { return _shortCut; }
+            set { _shortCut = value; }
+        }
+        public string DisplayString
+        {
+            get { return _displayString; }
+            set { _displayString = value; }
+        }
+        public string Description
+        {
+            get { return _description; }
+            set { _description = value; }
+        }
+        public IOrderService OrderService
+        {
+            get { return _ordSvc; }
+            set { _ordSvc = value; }
+        }
+    }
+}

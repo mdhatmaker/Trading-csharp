@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?><?xml-stylesheet type='text/xsl' href='_UpgradeReport_Files/UpgradeReport.xslt'?><UpgradeLog>
+<Properties><Property Name="Solution" Value="TTrader">
+</Property><Property Name="Solution File" Value="C:\Users\Michael\Dropbox\Visual Studio 2010\Projects\TTrader\TTrader.sln">
+</Property><Property Name="User Options File" Value="C:\Users\Michael\Dropbox\Visual Studio 2010\Projects\TTrader\TTrader.suo">
+</Property><Property Name="Date" Value="Wednesday, March 07, 2012">
+</Property><Property Name="Time" Value="3:01 AM">
+</Property></Properties><Event ErrorLevel="0" Project="" Source="TTrader.sln" Description="File successfully backed up as C:\Users\Michael\Dropbox\Visual Studio 2010\Projects\TTrader\Backup\TTrader.sln">
+</Event><Event ErrorLevel="0" Project="" Source="TTrader.suo" Description="File successfully backed up as C:\Users\Michael\Dropbox\Visual Studio 2010\Projects\TTrader\Backup\TTrader.suo">
+</Event><Event ErrorLevel="0" Project="TTrader" Source="TTrader\TTrader.csproj" Description="Project file successfully backed up as C:\Users\Michael\Dropbox\Visual Studio 2010\Projects\TTrader\Backup\TTrader\TTrader.csproj">
+</Event><Event ErrorLevel="0" Project="TTrader" Source="TTrader\TTraderForm.cs" Description="File successfully backed up as C:\Users\Michael\Dropbox\Visual Studio 2010\Projects\TTrader\Backup\TTrader\TTraderForm.cs">
+</Event><Event ErrorLevel="0" Project="TTrader" Source="TTrader\TTraderForm.Designer.cs" Description="File successfully backed up as C:\Users\Michael\Dropbox\Visual Studio 2010\Projects\TTrader\Backup\TTrader\TTraderForm.Designer.cs">
+</Event><Event ErrorLevel="0" Project="TTrader" Source="TTrader\Program.cs" Description="File successfully backed up as C:\Users\Michael\Dropbox\Visual Studio 2010\Projects\TTrader\Backup\TTrader\Program.cs">
+</Event><Event ErrorLevel="0" Project="TTrader" Source="TTrader\Properties\AssemblyInfo.cs" Description="File successfully backed up as C:\Users\Michael\Dropbox\Visual Studio 2010\Projects\TTrader\Backup\TTrader\Properties\AssemblyInfo.cs">
+</Event><Event ErrorLevel="0" Project="TTrader" Source="TTrader\Properties\Resources.Designer.cs" Description="File successfully backed up as C:\Users\Michael\Dropbox\Visual Studio 2010\Projects\TTrader\Backup\TTrader\Properties\Resources.Designer.cs">
+</Event><Event ErrorLevel="0" Project="TTrader" Source="TTrader\Properties\Settings.Designer.cs" Description="File successfully backed up as C:\Users\Michael\Dropbox\Visual Studio 2010\Projects\TTrader\Backup\TTrader\Properties\Settings.Designer.cs">
+</Event><Event ErrorLevel="0" Project="TTrader" Source="TTrader\Properties\Settings.settings" Description="File successfully backed up as C:\Users\Michael\Dropbox\Visual Studio 2010\Projects\TTrader\Backup\TTrader\Properties\Settings.settings">
+</Event><Event ErrorLevel="0" Project="TTrader" Source="TTrader\TTraderForm.resx" Description="File successfully backed up as C:\Users\Michael\Dropbox\Visual Studio 2010\Projects\TTrader\Backup\TTrader\TTraderForm.resx">
+</Event><Event ErrorLevel="0" Project="TTrader" Source="TTrader\Properties\Resources.resx" Description="File successfully backed up as C:\Users\Michael\Dropbox\Visual Studio 2010\Projects\TTrader\Backup\TTrader\Properties\Resources.resx">
+</Event><Event ErrorLevel="1" Project="TTrader" Source="TTrader\TTrader.csproj" Description="Your project is targeting .NET Framework 2.0 or 3.0. If your project uses assemblies requiring a newer .NET Framework, your project will fail to build. You can change the .NET Framework version by clicking Properties on the project menu and then selecting a new version in the '.NET Framework' dropdown box. (In Visual Basic, this is located on the Compile tab by clicking the 'Advanced Compiler Options...' button.)">
+</Event><Event ErrorLevel="0" Project="TTrader" Source="TTrader\TTrader.csproj" Description="Project converted successfully">
+</Event><Event ErrorLevel="3" Project="TTrader" Source="TTrader\TTrader.csproj" Description="Converted">
+</Event><Event ErrorLevel="0" Project="TTAPI" Source="TTAPI\TTAPI.csproj" Description="Project file successfully backed up as C:\Users\Michael\Dropbox\Visual Studio 2010\Projects\TTrader\Backup\TTAPI\TTAPI.csproj">
+</Event><Event ErrorLevel="0" Project="TTAPI" Source="TTAPI\TTAPI.csproj.user" Description="Project user file successfully backed up as C:\Users\Michael\Dropbox\Visual Studio 2010\Projects\TTrader\Backup\TTAPI\TTAPI.csproj.user">
+</Event><Event ErrorLevel="0" Project="TTAPI" Source="TTAPI\OrderSummary.cs" Description="File successfully backed up as C:\Users\Michael\Dropbox\Visual Studio 2010\Projects\TTrader\Backup\TTAPI\OrderSummary.cs">
+</Event><Event ErrorLevel="0" Project="TTAPI" Source="TTAPI\Fill.cs" Description="File successfully backed up as C:\Users\Michael\Dropbox\Visual Studio 2010\Projects\TTrader\Backup\TTAPI\Fill.cs">
+</Event><Event ErrorLevel="0" Project="TTAPI" Source="TTAPI\Instrument.cs" Description="File successfully backed up as C:\Users\Michael\Dropbox\Visual Studio 2010\Projects\TTrader\Backup\TTAPI\Instrument.cs">
+</Event><Event ErrorLevel="0" Project="TTAPI" Source="TTAPI\OrderManager.cs" Description="File successfully backed up as C:\Users\Michael\Dropbox\Visual Studio 2010\Projects\TTrader\Backup\TTAPI\OrderManager.cs">
+</Event><Event ErrorLevel="0" Project="TTAPI" Source="TTAPI\Quote.cs" Description="File successfully backed up as C:\Users\Michael\Dropbox\Visual Studio 2010\Projects\TTrader\Backup\TTAPI\Quote.cs">
+</Event><Event ErrorLevel="0" Project="TTAPI" Source="TTAPI\Trader.cs" Description="File successfully backed up as C:\Users\Michael\Dropbox\Visual Studio 2010\Projects\TTrader\Backup\TTAPI\Trader.cs">
+</Event><Event ErrorLevel="0" Project="TTAPI" Source="TTAPI\Properties\AssemblyInfo.cs" Description="File successfully backed up as C:\Users\Michael\Dropbox\Visual Studio 2010\Projects\TTrader\Backup\TTAPI\Properties\AssemblyInfo.cs">
+</Event><Event ErrorLevel="0" Project="TTAPI" Source="TTAPI\TTAPI.csproj" Description="The project file does not require conversion.">
+</Event><Event ErrorLevel="3" Project="TTAPI" Source="TTAPI\TTAPI.csproj" Description="No Conversion Required">
+</Event><Event ErrorLevel="0" Project="" Source="TTrader.sln" Description="Solution converted successfully">
+</Event><Event ErrorLevel="3" Project="" Source="TTrader.sln" Description="Converted">
+</Event><Event ErrorLevel="0" Project="TTrader" Source="TTrader\TTrader.csproj" Description="Scan complete: Upgrade not required for project files.">
+</Event></UpgradeLog>
